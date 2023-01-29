@@ -26,20 +26,20 @@ void signal_handler(int sig){
 			if(waitpid(-curr_job->pg_id, &status, WNOHANG) == 0)
 				continue;
 			else{
-				// if(WIFEXITED(status) != 0){
-		    	// 	printf("job exitting normally...\n");
-		    	// 	free_job(curr_job);
-		    	// }else if(WIFSTOPPED(status) != 0){
-		    	// 	// CTRL Z
-		    	// 	printf("ctrl z received...\n");
-		    	// 	curr_job->in_stop = true;
-		    	// 	curr_job->in_fg = false;
-		    	// 	curr_job->in_bg = false;
-		    	// }else if(WIFSIGNALED(status) != 0){
-		    	// 	// CTRL C
-		    	// 	printf("ctrl c received...\n");
-		    	// 	free_job(curr_job);
-		    	// }
+				if(WIFEXITED(status) != 0){
+		    		printf("job exitting normally...\n");
+		    		free_job(curr_job);
+		    	}else if(WIFSTOPPED(status) != 0){
+		    		// CTRL Z
+		    		printf("ctrl z received...\n");
+		    		curr_job->in_stop = true;
+		    		curr_job->in_fg = false;
+		    		curr_job->in_bg = false;
+		    	}else if(WIFSIGNALED(status) != 0){
+		    		// CTRL C
+		    		printf("ctrl c received...\n");
+		    		free_job(curr_job);
+		    	}
 			}
 		}
 	}
