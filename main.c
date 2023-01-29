@@ -15,29 +15,19 @@ extern Job *job_head;
 extern Job *job_tail;
 
 void signal_handler(int sig){
-	printf("Signal\n");
 	if(sig == SIGCHLD){
 		int status;
 		Job *curr_job;
 		Job *p_job = job_head->next_job;
+		int cnt = 0;
 		while(p_job != NULL){
 			curr_job = p_job;
 			p_job = curr_job->next_job;
 			if(waitpid(-curr_job->pg_id, &status, WNOHANG) == 0)
 				continue;
 			else{
-				if(WIFEXITED(status) != 0){
-		    		printf("job exitting normally...\n");
-		    		free_job(curr_job);
-		    	}else if(WIFSTOPPED(status) != 0){
-		    		// CTRL Z
-		    		printf("ctrl z received...\n");
-		    		curr_job->in_stop = true;
-		    		curr_job->in_fg = false;
-		    		curr_job->in_bg = false;
-		    	}else if(WIFSIGNALED(status) != 0){
-		    		// CTRL C
-		    		printf("ctrl c received...\n");
+				if(WIFEXITED(status) != 0 && curr_job->in_bg){
+					print_done(curr_job);
 		    		free_job(curr_job);
 		    	}
 			}
@@ -79,7 +69,6 @@ void exec_one_cmd(Command* command){
 	int cpid = fork();
 	Job *job = create_job(cpid, command->is_bg_cmd? 2 : 1, command->input_cmd);
 	if (cpid == 0){
-		printf("new fork\n");
 		if(signal(SIGINT, SIG_DFL) == SIG_ERR){
 			printf("ERROR");
 		}
@@ -87,13 +76,11 @@ void exec_one_cmd(Command* command){
 			printf("ERROR");
 		}
 		// signal(SIGCHLD, SIG_DFL);
-		printf("new fork1\n");
 		setpgid(getpid(), getpid()); 
-		// printf("new fork1\n");
 		if(job->in_fg){
 			tcsetpgrp(STDIN_FILENO, getpid());
 		}
-		printf("aaaa");
+
 		if(exec_cmd(command) == -1){
 			printf("error\n");
 			free_job(job);

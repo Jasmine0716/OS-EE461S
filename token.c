@@ -42,7 +42,6 @@ Command* parse_cmd(char* input_str){
 		}
 		input_str = NULL;
 	}
-	printf("%d %s\n",curr_cmd->arg_cnt, curr_cmd->args[1]);
 	return commands;
 }
 

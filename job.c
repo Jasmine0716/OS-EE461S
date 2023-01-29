@@ -59,13 +59,23 @@ Job* create_job(pid_t pgid, int status, char* input){
 	return job;
 }
 
+void print_done(Job *job){
+	printf("[%d] ", job->job_id);
+	if(job == job_tail)
+		printf("+");
+	else
+		printf("-");
+	printf(" Done");
+	printf("\t%s \n", job->input_cmd);
+}
+
 void print_jobs(){
 	Job *curr_job = job_head->next_job;
 	while(curr_job != NULL){
 		printf("[%d] ", curr_job->job_id);
-		if(curr_job->in_fg)
+		if(curr_job == job_tail)
 			printf("+");
-		if(curr_job->in_bg)
+		else
 			printf("-");
 		if(curr_job->in_stop)
 			printf(" Stopped");
@@ -78,31 +88,23 @@ void print_jobs(){
 
 void wait_exec(Job *job){
 	int status;
-	printf("0");
 	waitpid(job->pg_id, &status, WUNTRACED);
-	printf("1");
 	if(WIFEXITED(status) != 0){
-		printf("2");
 		free_job(job);
 	}else if(WIFSTOPPED(status) != 0){
 		// CTRL Z
-		printf("3");
 		job->in_stop = true;
 		job->in_fg = false;
 		job->in_bg = false;
 	}else if(WIFSIGNALED(status) != 0){
-		// CTRL C
-		printf("4");
 		free_job(job);
 	}
-	printf("5");
 	tcsetpgrp(STDIN_FILENO, getpid());
-	printf("6");
 }
 
 void fg(){
-	Job *curr_job = job_head->next_job;
-	while(curr_job != NULL){
+	Job *curr_job = job_tail;
+	while(curr_job != job_head){
 		if(curr_job->in_stop || curr_job->in_bg){
 			curr_job->in_fg = true;
 			curr_job->in_stop = false;
@@ -112,16 +114,13 @@ void fg(){
 			wait_exec(curr_job);
 			break;
 		}
-		curr_job = curr_job->next_job;
+		curr_job = curr_job->prev_job;
 	}
 }
 
 void bg(int job_id){
-	// 1. change status to bg
-	// 2. make the terminal take control
-	//
-	Job *curr_job = job_head->next_job;
-	while(curr_job != NULL){
+	Job *curr_job = job_tail;
+	while(curr_job != job_head){
 		if(curr_job->in_stop){
 			curr_job->in_fg = false;
 			curr_job->in_stop = false;
@@ -129,5 +128,6 @@ void bg(int job_id){
 			kill(-curr_job->pg_id, SIGCONT);
 			break;
 		}
+		curr_job = curr_job->prev_job;
 	}
 }
