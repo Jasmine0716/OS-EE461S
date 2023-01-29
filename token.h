@@ -11,6 +11,7 @@ typedef struct Commands{
 	char *error_redirect;
 	bool has_pipe;
 	bool has_cmd;
+	bool is_bg_cmd;
 }Command;
 
 Command* parse_cmd(char* input_str);

@@ -35,6 +35,8 @@ Command* parse_cmd(char* input_str){
 		}else if(strcmp(token, "|") == 0){
 			curr_cmd->has_pipe = true;
 			curr_cmd = &commands[1];
+		}else if(strcmp(token, "&") == 0){
+			curr_cmd->is_bg_cmd = true;
 		}else{
 			curr_cmd->args[curr_cmd->arg_cnt++] = token;
 		}
