@@ -77,7 +77,7 @@ int exec_cmd(Command* command){
 
 void exec_one_cmd(Command* command){
 	int cpid = fork();
-	Job *job = create_job(cpid, strcmp(command->args[command->arg_cnt-1], "&") == 0? 2 : 1, command->input_cmd);
+	Job *job = create_job(cpid, command->is_bg_cmd? 2 : 1, command->input_cmd);
 	if (cpid == 0){
 		printf("new fork\n");
 		if(signal(SIGINT, SIG_DFL) == SIG_ERR){
@@ -104,8 +104,7 @@ void exec_one_cmd(Command* command){
 
 			wait_exec(job);
 	    }else{
-	    	// int status;
-	    	// waitpid(cpid, &status, WNOHANG);
+	    	tcsetpgrp(STDIN_FILENO, getpid());
 	    }
 	}
 }
