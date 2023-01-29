@@ -1,2 +1,10 @@
 *.o
 yash
+hello
+hello.c
+save.c
+signal.c
+test
+test.c
+jobs.txt
+.DS_Store
