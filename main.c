@@ -75,7 +75,6 @@ void exec_one_cmd(Command* command){
 		if(signal(SIGTSTP, signal_handler) == SIG_ERR){
 			printf("ERROR");
 		}
-		// signal(SIGCHLD, SIG_DFL);
 		setpgid(getpid(), getpid()); 
 		if(job->in_fg){
 			tcsetpgrp(STDIN_FILENO, getpid());
@@ -103,27 +102,74 @@ void exec_pipe_cmd(Command* command){
 	}
 
 	int cpid_l = fork();
+	Job *job = create_job(cpid_l, command[1].is_bg_cmd? 2 : 1, command->input_cmd);
 
 	if (cpid_l == 0){ // child process 1: on the left side of the pipe
+		if(signal(SIGINT, SIG_DFL) == SIG_ERR){
+			printf("ERROR");
+		}
+		if(signal(SIGTSTP, signal_handler) == SIG_ERR){
+			printf("ERROR");
+		}
+
+		signal(SIGTTOU, SIG_IGN);
+
+		setpgid(getpid(), getpid());
+		printf("set left id\n");
+		if(job->in_fg){
+			printf("get terminal control\n");
+			tcsetpgrp(STDIN_FILENO, getpid());
+			printf("get terminal control\n");
+		}
+		printf("111\n");
 		close(pipefd[0]);
+		printf("2\n");
 		dup2(pipefd[1], STDOUT_FILENO);
-		exec_cmd(command);
+		printf("3\n");
+		if(exec_cmd(command) == -1){
+			printf("error\n");
+			free_job(job);
+		}
 	}else{
+		printf("4\n");
 		int cpid_r = fork();
+		printf("5\n");
 		if(cpid_r == 0){
+			if(signal(SIGINT, SIG_DFL) == SIG_ERR){
+				printf("ERROR");
+			}
+			if(signal(SIGTSTP, signal_handler) == SIG_ERR){
+				printf("ERROR");
+			}
+			
+			signal(SIGTTOU, SIG_IGN);
+			printf("adad %d\n", setpgid(getpid(), cpid_l)); 
+			printf("set right id\n");
 			close(pipefd[1]);
+			printf("Done");
 			dup2(pipefd[0], STDIN_FILENO);
-			exec_cmd(&command[1]);
+			printf("Done");
+			if(exec_cmd(&command[1]) == -1){
+				printf("error\n");
+				free_job(job);
+			}
+			printf("Done");
 		}else{
+			printf("a\n");
 			close(pipefd[0]);
 			close(pipefd[1]);
-			// wait((int *)NULL);
-			waitpid(cpid_r, NULL, 0);
+
+			printf("a\n");
+			if(job->in_fg){
+				printf("a\n");
+				tcsetpgrp(STDIN_FILENO, cpid_l);
+
+				printf("a\n");
+				wait_exec(job);
+		    }else{
+		    	tcsetpgrp(STDIN_FILENO, getpid());
+		    }
 		}
-		close(pipefd[0]);
-		close(pipefd[1]);
-		// wait((int *)NULL);
-		waitpid(cpid_l, NULL, 0);
 	}
 }
 

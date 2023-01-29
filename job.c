@@ -88,7 +88,7 @@ void print_jobs(){
 
 void wait_exec(Job *job){
 	int status;
-	waitpid(job->pg_id, &status, WUNTRACED);
+	waitpid(-job->pg_id, &status, WUNTRACED);
 	if(WIFEXITED(status) != 0){
 		free_job(job);
 	}else if(WIFSTOPPED(status) != 0){
