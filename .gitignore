@@ -8,3 +8,5 @@ test
 test.c
 jobs.txt
 .DS_Store
+.vscode
+temp.txt

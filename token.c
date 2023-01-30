@@ -42,8 +42,6 @@ Command* parse_cmd(char* input_str){
 		}
 		input_str = NULL;
 	}
-	printf("command 1: %d %s\n", commands[0].arg_cnt, commands[0].cmd);
-	printf("command 2: %d %s\n", commands[1].arg_cnt, commands[2].cmd);
 	return commands;
 }
 

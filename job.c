@@ -7,6 +7,8 @@
 #include<unistd.h>
 #include<signal.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 
 #include "token.h"
@@ -110,7 +112,7 @@ void fg(){
 			curr_job->in_stop = false;
 			curr_job->in_bg = false;
 			tcsetpgrp(STDIN_FILENO, curr_job->pg_id);
-			kill(-curr_job->pg_id, SIGCONT);
+			kill(curr_job->pg_id, SIGCONT);
 			wait_exec(curr_job);
 			break;
 		}
@@ -125,7 +127,7 @@ void bg(int job_id){
 			curr_job->in_fg = false;
 			curr_job->in_stop = false;
 			curr_job->in_bg = true;
-			kill(-curr_job->pg_id, SIGCONT);
+			kill(curr_job->pg_id, SIGCONT);
 			break;
 		}
 		curr_job = curr_job->prev_job;
