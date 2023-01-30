@@ -16,6 +16,7 @@ typedef struct Jobs{
 
 void free_job(Job *job);
 Job* create_job(pid_t pgid, int status, char* input);
+void print_done(Job *job);
 void print_jobs();
 void wait_exec(Job *job);
 void fg();
