@@ -17,6 +17,12 @@ extern Job *job_head;
 extern Job *job_tail;
 
 void signal_handler(int sig){
+	if(sig == SIGINT){
+		printf("SIGINT received\n");
+	}
+	if(sig == SIGTSTP){
+		printf("SIGTSTP received\n");
+	}
 	if(sig == SIGCHLD){
 		int status;
 		Job *curr_job;
@@ -70,14 +76,15 @@ int exec_cmd(Command* command){
 void exec_one_cmd(Command* command){
 	int cpid = fork();
 	Job *job = create_job(cpid, command->is_bg_cmd? 2 : 1, command->input_cmd);
+	setpgid(cpid, cpid); 
 	if (cpid == 0){
 		if(signal(SIGINT, SIG_DFL) == SIG_ERR){
 			printf("ERROR");
 		}
-		if(signal(SIGTSTP, signal_handler) == SIG_ERR){
+		if(signal(SIGTSTP, SIG_DFL) == SIG_ERR){
 			printf("ERROR");
 		}
-		setpgid(getpid(), getpid()); 
+		
 		if(job->in_fg){
 			tcsetpgrp(STDIN_FILENO, getpid());
 		}
@@ -89,7 +96,6 @@ void exec_one_cmd(Command* command){
 	}else{
 	    if(job->in_fg){
 			tcsetpgrp(STDIN_FILENO, cpid);
-
 			wait_exec(job);
 	    }else{
 	    	tcsetpgrp(STDIN_FILENO, getpid());
@@ -104,75 +110,53 @@ void exec_pipe_cmd(Command* command){
 	}
 
 	int cpid_l = fork();
+	int cpid_r = fork();
 	Job *job = create_job(cpid_l, command[1].is_bg_cmd? 2 : 1, command->input_cmd);
 
+	setpgid(cpid_l, cpid_l);
+	setpgid(cpid_r, cpid_l);
 	if (cpid_l == 0){ // child process 1: on the left side of the pipe
-		if(signal(SIGINT, SIG_DFL) == SIG_ERR){
+		if(signal(SIGINT, signal_handler) == SIG_ERR){
 			printf("ERROR");
 		}
 		if(signal(SIGTSTP, signal_handler) == SIG_ERR){
 			printf("ERROR");
 		}
 
-		signal(SIGTTOU, SIG_IGN);
-
-		setpgid(getpid(), getpid());
-		printf("set left id\n");
 		if(job->in_fg){
-			printf("get terminal control\n");
 			tcsetpgrp(STDIN_FILENO, getpid());
-			printf("get terminal control\n");
 		}
-		printf("111\n");
 		close(pipefd[0]);
-		printf("2\n");
 		dup2(pipefd[1], STDOUT_FILENO);
-		printf("3\n");
 		if(exec_cmd(command) == -1){
 			printf("error\n");
 			free_job(job);
 		}
-	}else{
-		printf("4\n");
-		int cpid_r = fork();
-		printf("5\n");
-		if(cpid_r == 0){
-			if(signal(SIGINT, SIG_DFL) == SIG_ERR){
-				printf("ERROR");
-			}
-			if(signal(SIGTSTP, signal_handler) == SIG_ERR){
-				printf("ERROR");
-			}
-			
-			signal(SIGTTOU, SIG_IGN);
-			printf("adad %d\n", setpgid(getpid(), cpid_l)); 
-			printf("set right id\n");
-			close(pipefd[1]);
-			printf("Done");
-			dup2(pipefd[0], STDIN_FILENO);
-			printf("Done");
-			if(exec_cmd(&command[1]) == -1){
-				printf("error\n");
-				free_job(job);
-			}
-			printf("Done");
-		}else{
-			printf("a\n");
-			close(pipefd[0]);
-			close(pipefd[1]);
-
-			printf("a\n");
-			if(job->in_fg){
-				printf("a\n");
-				tcsetpgrp(STDIN_FILENO, cpid_l);
-
-				printf("a\n");
-				wait_exec(job);
-		    }else{
-		    	tcsetpgrp(STDIN_FILENO, getpid());
-		    }
+	}
+	if(cpid_r == 0){
+		if(signal(SIGINT, signal_handler) == SIG_ERR){
+			printf("ERROR");
+		}
+		if(signal(SIGTSTP, signal_handler) == SIG_ERR){
+			printf("ERROR");
+		}
+		
+		close(pipefd[1]);
+		dup2(pipefd[0], STDIN_FILENO);
+		if(exec_cmd(&command[1]) == -1){
+			printf("error\n");
+			free_job(job);
 		}
 	}
+	close(pipefd[0]);
+	close(pipefd[1]);
+
+	if(job->in_fg){
+		tcsetpgrp(STDIN_FILENO, cpid_l);
+		wait_exec(job);
+    }else{
+    	tcsetpgrp(STDIN_FILENO, getpid());
+    }
 }
 
 int main(){
@@ -181,7 +165,7 @@ int main(){
 	job_tail = job_head;
 	// create_job()
 	while(1){
-		signal(SIGINT, SIG_IGN);
+		signal(SIGINT, signal_handler);
 		signal(SIGTSTP, SIG_IGN);
 		signal(SIGTTOU, SIG_IGN);
 		signal(SIGCHLD, signal_handler);
